@@ -87,16 +87,14 @@ body {
 /* Header Styles */
 .app-header {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   background: var(--panel-bg);
   backdrop-filter: blur(12px);
-  padding: 14px 24px;
+  padding: 16px 24px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-  gap: 16px;
+  gap: 14px;
 }
 
 .logo-title {
@@ -131,8 +129,18 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
+}
+
+.control-subgroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .custom-select {
@@ -155,6 +163,7 @@ body {
 .button-group {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .icon-btn {
@@ -263,10 +272,14 @@ body {
 }
 
 .piece-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
 }
 
 .p1-avatar {
@@ -414,7 +427,6 @@ body {
   padding: 6px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   font-family: monospace;
-
 }
 
 .history-table tr:hover {
@@ -465,6 +477,17 @@ body {
   border-color: var(--accent-gold);
   background: rgba(245, 158, 11, 0.15);
   color: var(--accent-gold);
+}
+
+.status-banner.thinking {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  animation: pulse-thinking 1s infinite alternate;
+}
+
+@keyframes pulse-thinking {
+  0% { opacity: 0.8; }
+  100% { opacity: 1; transform: scale(1.02); }
 }
 
 /* Board Outer Framing with Coordinates */
@@ -661,7 +684,7 @@ body.hide-coords .rank-labels {
   border: 1px solid var(--panel-border);
   border-radius: 16px;
   width: 90%;
-  max-width: 520px;
+  max-width: 540px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.6);
   overflow: hidden;
 }
@@ -740,6 +763,9 @@ body.hide-coords .rank-labels {
   }
   .history-card {
     max-height: 250px;
+  }
+  .button-group {
+    margin-left: 0;
   }
 }
 
