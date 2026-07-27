@@ -1,4 +1,4 @@
-// Checkers / Draughts Master Game Engine with Computer AI
+// Checkers / Draughts Master Game Engine with Customizable Color Choice & Board Positions
 
 const BOARD_SIZE = 8;
 let board = [];
@@ -9,14 +9,15 @@ let multiJumpPiece = null;
 let gameOver = false;
 
 // Game Settings
-let opponentType = 'human'; // 'human' | 'ai'
-let aiDifficulty = 'easy';  // 'easy' | 'hard'
-let aiFirst = 'human';      // 'human' | 'ai'
-let gameMode = 'feed-first'; // 'feed-first' | 'strategic'
-let currentTheme = 'red-white';
+let opponentType = 'human';     // 'human' | 'ai'
+let aiDifficulty = 'easy';      // 'easy' | 'hard'
+let gameMode = 'feed-first';    // 'feed-first' | 'strategic'
+let currentTheme = 'red-white'; // 'red-white' | 'black-white' | 'brown-white'
+let p1ColorChoice = 'primary';  // 'primary' (Red/Black/Brown) | 'white'
+let firstTurnChoice = 'p1';     // 'p1' | 'p2'
 
-let aiPlayer = 'p2';        // 'p1' or 'p2'
-let humanPlayer = 'p1';     // 'p1' or 'p2'
+let aiPlayer = 'p2';            // 'p1' or 'p2'
+let humanPlayer = 'p1';         // 'p1' or 'p2'
 let isAiThinking = false;
 let soundEnabled = true;
 let showCoordinates = true;
@@ -106,15 +107,15 @@ function getNotation(r, c) {
   return `${colName}${rowName}`;
 }
 
-// Initialize board state
+// Initialize board state: P2 at Top (rows 0-2), P1 at Bottom (rows 5-7)
 function initBoard() {
   board = [];
   for (let r = 0; r < BOARD_SIZE; r++) {
     const row = [];
     for (let c = 0; c < BOARD_SIZE; c++) {
       if ((r + c) % 2 === 1) {
-        if (r < 3) row.push({ player: 'p2', king: false });
-        else if (r > 4) row.push({ player: 'p1', king: false });
+        if (r < 3) row.push({ player: 'p2', king: false }); // Top side moves DOWN
+        else if (r > 4) row.push({ player: 'p1', king: false }); // Bottom side moves UP
         else row.push(null);
       } else {
         row.push(null);
@@ -124,7 +125,7 @@ function initBoard() {
   }
 }
 
-// Deep clone board state for undo history & AI evaluation
+// Deep clone board state
 function cloneState(b = board) {
   return JSON.parse(JSON.stringify(b));
 }
@@ -148,7 +149,6 @@ function saveStateToUndo() {
 function undoMove() {
   if (historyStack.length === 0 || isAiThinking) return;
 
-  // In vs Computer mode, undo twice to revert AI's turn + Player's turn
   const stepsToUndo = (opponentType === 'ai' && historyStack.length >= 2) ? 2 : 1;
   let previousState = null;
 
@@ -177,14 +177,14 @@ function undoMove() {
   renderCaptures();
 }
 
-// Check valid moves and jumps for a piece at (r, c) on a given board
+// Check valid moves and jumps for a piece at (r, c)
 function getValidMoves(r, c, b = board) {
   const piece = b[r][c];
   if (!piece) return { moves: [], jumps: [] };
 
   const moves = [];
   const jumps = [];
-  // P1 moves UP (-1), P2 moves DOWN (+1)
+  // P1 (Bottom Player) moves UP (-1), P2 (Top Player) moves DOWN (+1)
   const directions = piece.king ? [-1, 1] : (piece.player === 'p1' ? [-1] : [1]);
 
   for (const dr of directions) {
@@ -286,8 +286,14 @@ function highlightValidMoves() {
   }
 }
 
-function handleCellClick(r, c) {
-  if (gameOver || (opponentType === 'ai' && currentPlayer === aiPlayer && !isAiThinking)) return;
+function handleCellClick(r, c, isAiCall = false) {
+  if (gameOver) return;
+
+  // Block human clicks during AI turn
+  if (!isAiCall && opponentType === 'ai' && currentPlayer === aiPlayer) {
+    return;
+  }
+
   const piece = board[r][c];
 
   // 1. Own piece selection
@@ -336,7 +342,7 @@ function handleCellClick(r, c) {
     renderCaptures();
   }
 
-  // Promotion check
+  // Promotion check: P1 (Bottom) promotes at row 0, P2 (Top) promotes at row 7
   const movedPiece = board[r][c];
   let promotedThisTurn = false;
   if (!movedPiece.king) {
@@ -362,7 +368,7 @@ function handleCellClick(r, c) {
     recordMove(currentPlayer, moveStr, false);
   }
 
-  // Multi-jump check (Turn ends if promoted to King on jump)
+  // Multi-jump check
   if (isJump && !promotedThisTurn) {
     const { jumps: moreJumps } = getValidMoves(r, c);
     if (moreJumps.length > 0) {
@@ -372,7 +378,6 @@ function handleCellClick(r, c) {
       renderBoard();
       updateStatus();
 
-      // If AI is playing multi-jump, schedule next jump step
       if (opponentType === 'ai' && currentPlayer === aiPlayer) {
         setTimeout(() => triggerAiTurn(), 400);
       }
@@ -386,6 +391,7 @@ function handleCellClick(r, c) {
   currentPlayer = currentPlayer === 'p1' ? 'p2' : 'p1';
 
   mustJump = (gameMode === 'feed-first') ? hasAnyJumps(currentPlayer) : false;
+  isAiThinking = false;
 
   updateStatus();
   renderBoard();
@@ -520,12 +526,26 @@ function showWinner(wText) {
   document.getElementById('p2-card').classList.remove('active-turn');
 }
 
-function getPlayerDisplayName(player) {
-  if (opponentType === 'ai') {
-    return player === aiPlayer ? 'Computer 🤖' : 'Player (You)';
+function getPrimaryColorName() {
+  const names = { 'red-white': 'Red', 'black-white': 'Black', 'brown-white': 'Brown' };
+  return names[currentTheme] || 'Red';
+}
+
+function getPlayerColorName(player) {
+  const primaryName = getPrimaryColorName();
+  if (player === 'p1') {
+    return p1ColorChoice === 'primary' ? primaryName : 'White';
   } else {
-    const p1Names = { 'red-white': 'Red', 'black-white': 'Black', 'brown-white': 'Brown' };
-    return player === 'p1' ? p1Names[currentTheme] : 'White';
+    return p1ColorChoice === 'primary' ? 'White' : primaryName;
+  }
+}
+
+function getPlayerDisplayName(player) {
+  const colorName = getPlayerColorName(player);
+  if (opponentType === 'ai') {
+    return player === aiPlayer ? `Computer 🤖 (${colorName})` : `Player (${colorName})`;
+  } else {
+    return player === 'p1' ? `P1 (${colorName})` : `P2 (${colorName})`;
   }
 }
 
@@ -561,7 +581,7 @@ function updateStatus() {
     banner.classList.add('thinking');
     icon.textContent = '🤖';
     text.textContent = 'Computer is thinking...';
-    
+
     if (!isAiThinking) {
       isAiThinking = true;
       setTimeout(() => triggerAiTurn(), 450);
@@ -574,14 +594,13 @@ function updateStatus() {
 }
 
 // -------------------------------------------------------------
-// 🤖 COMPUTER AI ENGINE (Easy vs Hard Minimax with Alpha-Beta)
+// 🤖 COMPUTER AI ENGINE
 // -------------------------------------------------------------
 
 function getAllLegalMovesForPlayer(player, b = board, mode = gameMode, multiPiece = multiJumpPiece) {
   const allMoves = [];
   const hasJumps = hasAnyJumps(player, b);
 
-  // If in continuous multi-jump: only moves from multiPiece are allowed
   if (multiPiece) {
     const { jumps } = getValidMoves(multiPiece.r, multiPiece.c, b);
     jumps.forEach(j => {
@@ -595,7 +614,7 @@ function getAllLegalMovesForPlayer(player, b = board, mode = gameMode, multiPiec
       const piece = b[r][c];
       if (piece && piece.player === player) {
         const { moves, jumps } = getValidMoves(r, c, b);
-        
+
         if (mode === 'feed-first' && hasJumps) {
           jumps.forEach(j => allMoves.push({ fromR: r, fromC: c, toR: j.r, toC: j.c, isJump: true }));
         } else {
@@ -626,11 +645,9 @@ function triggerAiTurn() {
   let selectedMove = null;
 
   if (aiDifficulty === 'easy') {
-    // Easy AI: Pick a random valid move/jump
     const randIdx = Math.floor(Math.random() * legalOptions.length);
     selectedMove = legalOptions[randIdx];
   } else {
-    // Hard AI: Minimax evaluation with depth 4
     selectedMove = getBestMoveMinimax(aiPlayer, 4);
   }
 
@@ -638,13 +655,10 @@ function triggerAiTurn() {
     selectedMove = legalOptions[0];
   }
 
-  // Execute chosen AI move
   selectedPiece = { r: selectedMove.fromR, c: selectedMove.fromC };
-  isAiThinking = false;
-  handleCellClick(selectedMove.toR, selectedMove.toC);
+  handleCellClick(selectedMove.toR, selectedMove.toC, true);
 }
 
-// Evaluate board state position for AI
 function evaluateBoardState(b, aiPl, humPl) {
   let score = 0;
 
@@ -653,15 +667,12 @@ function evaluateBoardState(b, aiPl, humPl) {
       const p = b[r][c];
       if (p) {
         let val = p.king ? 18 : 10;
-        
-        // Positional Bonus: Center control
+
         if (r >= 2 && r <= 5 && c >= 2 && c <= 5) val += 1.2;
 
-        // Positional Bonus: Back row protection (prevents enemy kinging)
         if (p.player === 'p1' && r === 7) val += 1.5;
         if (p.player === 'p2' && r === 0) val += 1.5;
 
-        // Advancement bonus for regular pieces
         if (!p.king) {
           if (p.player === 'p1') val += (7 - r) * 0.4;
           else val += r * 0.4;
@@ -673,7 +684,6 @@ function evaluateBoardState(b, aiPl, humPl) {
     }
   }
 
-  // Mobility bonus
   const aiMobility = getAllLegalMovesForPlayer(aiPl, b).length;
   const humMobility = getAllLegalMovesForPlayer(humPl, b).length;
   score += (aiMobility - humMobility) * 0.5;
@@ -681,7 +691,6 @@ function evaluateBoardState(b, aiPl, humPl) {
   return score;
 }
 
-// Simulate a move on a cloned board
 function simulateMoveOnBoard(b, move) {
   const newBoard = cloneState(b);
   const { fromR, fromC, toR, toC, isJump } = move;
@@ -704,7 +713,6 @@ function simulateMoveOnBoard(b, move) {
   return newBoard;
 }
 
-// Minimax algorithm with Alpha-Beta pruning
 function getBestMoveMinimax(player, depth) {
   const legalMoves = getAllLegalMovesForPlayer(player);
   if (legalMoves.length === 0) return null;
@@ -717,7 +725,7 @@ function getBestMoveMinimax(player, depth) {
   for (const move of legalMoves) {
     const nextBoard = simulateMoveOnBoard(board, move);
     const score = minimax(nextBoard, depth - 1, alpha, beta, false, player, humanPlayer);
-    
+
     if (score > bestScore) {
       bestScore = score;
       bestMove = move;
@@ -764,12 +772,13 @@ function minimax(b, depth, alpha, beta, isMaximizing, aiPl, humPl) {
 }
 
 // -------------------------------------------------------------
-// Control Bar Event Handlers
+// Control Bar Event Handlers & Theme UI Sync
 // -------------------------------------------------------------
 
 function changeOpponent(opp) {
   opponentType = opp;
   document.getElementById('ai-options-group').classList.toggle('hidden', opponentType !== 'ai');
+  updateThemeAndColorUI();
   resetGame();
 }
 
@@ -777,8 +786,20 @@ function changeAiDifficulty(diff) {
   aiDifficulty = diff;
 }
 
-function changeAiFirst(firstChoice) {
-  aiFirst = firstChoice;
+function changeTheme(theme) {
+  currentTheme = theme;
+  updateThemeAndColorUI();
+  resetGame();
+}
+
+function changeColorChoice(choice) {
+  p1ColorChoice = choice;
+  updateThemeAndColorUI();
+  resetGame();
+}
+
+function changeFirstTurn(turn) {
+  firstTurnChoice = turn;
   resetGame();
 }
 
@@ -789,15 +810,36 @@ function changeGameMode(mode) {
   renderBoard();
 }
 
-function changeTheme(theme) {
-  currentTheme = theme;
-  document.body.setAttribute('data-theme', theme);
-  updatePlayerCardsUI();
-  updateStatus();
-  renderBoard();
-}
+function updateThemeAndColorUI() {
+  document.body.setAttribute('data-theme', currentTheme);
+  document.body.setAttribute('data-p1-color', p1ColorChoice);
 
-function updatePlayerCardsUI() {
+  const primaryName = getPrimaryColorName();
+  const primaryEmoji = currentTheme === 'red-white' ? '🔴' : (currentTheme === 'black-white' ? '⚫' : '🤎');
+
+  // Update Color Choice Options
+  const optP1Primary = document.getElementById('opt-p1-primary');
+  const optP1White = document.getElementById('opt-p1-white');
+
+  optP1Primary.textContent = `${primaryEmoji} ${primaryName}`;
+  optP1White.textContent = `⚪ White`;
+
+  // Update First Turn Options
+  const optFirstP1 = document.getElementById('opt-first-p1');
+  const optFirstP2 = document.getElementById('opt-first-p2');
+
+  const p1ColName = getPlayerColorName('p1');
+  const p2ColName = getPlayerColorName('p2');
+
+  if (opponentType === 'ai') {
+    optFirstP1.textContent = `👤 Player (${p1ColName}) First`;
+    optFirstP2.textContent = `🤖 Computer (${p2ColName}) First`;
+  } else {
+    optFirstP1.textContent = `👤 Player 1 (${p1ColName}) First`;
+    optFirstP2.textContent = `👥 Player 2 (${p2ColName}) First`;
+  }
+
+  // Update Player Card Names
   const p1NameEl = document.getElementById('p1-name');
   const p2NameEl = document.getElementById('p2-name');
   const thP1 = document.getElementById('th-p1');
@@ -805,34 +847,19 @@ function updatePlayerCardsUI() {
   const p1Avatar = document.getElementById('p1-avatar-icon');
   const p2Avatar = document.getElementById('p2-avatar-icon');
 
+  p1NameEl.textContent = opponentType === 'ai' ? `Player (You: ${p1ColName})` : `Player 1 (Bottom: ${p1ColName})`;
+  p2NameEl.textContent = opponentType === 'ai' ? `Computer 🤖 (${p2ColName})` : `Player 2 (Top: ${p2ColName})`;
+
+  thP1.textContent = `P1 (${p1ColName})`;
+  thP2.textContent = `P2 (${p2ColName})`;
+
+  p1Avatar.textContent = opponentType === 'ai' ? '👤' : '♟️';
+  p2Avatar.textContent = opponentType === 'ai' ? '🤖' : '♟️';
+
+  // AI vs Human Player assignment
   if (opponentType === 'ai') {
-    if (aiFirst === 'human') {
-      aiPlayer = 'p2';
-      humanPlayer = 'p1';
-      p1NameEl.textContent = 'Player (You)';
-      p2NameEl.textContent = 'Computer 🤖';
-      thP1.textContent = 'Player';
-      thP2.textContent = 'Computer';
-      p1Avatar.textContent = '👤';
-      p2Avatar.textContent = '🤖';
-    } else {
-      aiPlayer = 'p1';
-      humanPlayer = 'p2';
-      p1NameEl.textContent = 'Computer 🤖';
-      p2NameEl.textContent = 'Player (You)';
-      thP1.textContent = 'Computer';
-      thP2.textContent = 'Player';
-      p1Avatar.textContent = '🤖';
-      p2Avatar.textContent = '👤';
-    }
-  } else {
-    const p1Names = { 'red-white': 'Red', 'black-white': 'Black', 'brown-white': 'Brown' };
-    p1NameEl.textContent = p1Names[currentTheme];
-    p2NameEl.textContent = 'White';
-    thP1.textContent = p1Names[currentTheme];
-    thP2.textContent = 'White';
-    p1Avatar.textContent = '';
-    p2Avatar.textContent = '';
+    aiPlayer = 'p2';
+    humanPlayer = 'p1';
   }
 }
 
@@ -858,7 +885,7 @@ function closeRulesOnBackdrop(e) {
 }
 
 function resetGame() {
-  currentPlayer = 'p1';
+  currentPlayer = firstTurnChoice;
   selectedPiece = null;
   mustJump = false;
   multiJumpPiece = null;
@@ -871,7 +898,7 @@ function resetGame() {
 
   document.getElementById('undo-btn').disabled = true;
   initBoard();
-  updatePlayerCardsUI();
+  updateThemeAndColorUI();
 
   mustJump = (gameMode === 'feed-first') ? hasAnyJumps(currentPlayer) : false;
   updateStatus();
@@ -882,5 +909,5 @@ function resetGame() {
 
 // Initial game load
 initBoard();
-changeTheme('red-white');
+updateThemeAndColorUI();
 resetGame();
