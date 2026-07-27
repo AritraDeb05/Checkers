@@ -19,8 +19,36 @@
         <h1>Checkers / Draughts</h1>
       </div>
 
-      <!-- Quick Control Bar -->
+      <!-- Control Bar -->
       <div class="control-bar">
+        <!-- Opponent Selection -->
+        <div class="control-group">
+          <label for="opponent-select">👥 Opponent:</label>
+          <select id="opponent-select" class="custom-select" onchange="changeOpponent(this.value)">
+            <option value="human" selected>👥 Pass & Play (2P)</option>
+            <option value="ai">🤖 vs Computer</option>
+          </select>
+        </div>
+
+        <!-- AI Options (Hidden when Human opponent selected) -->
+        <div id="ai-options-group" class="control-group hidden">
+          <div class="control-subgroup">
+            <label for="ai-difficulty">🎯 Difficulty:</label>
+            <select id="ai-difficulty" class="custom-select" onchange="changeAiDifficulty(this.value)">
+              <option value="easy" selected>🟢 Easy</option>
+              <option value="hard">🔴 Hard (Minimax)</option>
+            </select>
+          </div>
+          <div class="control-subgroup">
+            <label for="ai-first">🚀 Starts First:</label>
+            <select id="ai-first" class="custom-select" onchange="changeAiFirst(this.value)">
+              <option value="human" selected>👤 Player First</option>
+              <option value="ai">🤖 Computer First</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Game Mode Selection -->
         <div class="control-group">
           <label for="mode-select">🎮 Mode:</label>
           <select id="mode-select" class="custom-select" onchange="changeGameMode(this.value)">
@@ -29,6 +57,7 @@
           </select>
         </div>
 
+        <!-- Theme Selection -->
         <div class="control-group">
           <label for="theme-select">🎨 Color Theme:</label>
           <select id="theme-select" class="custom-select" onchange="changeTheme(this.value)">
@@ -38,8 +67,9 @@
           </select>
         </div>
 
+        <!-- Icon Buttons -->
         <div class="button-group">
-          <button id="sound-btn" class="icon-btn" onclick="toggleSound()" title="Toggle Sound">
+          <button id="sound-btn" class="icon-btn active" onclick="toggleSound()" title="Toggle Sound">
             <span id="sound-icon">🔊</span>
           </button>
           <button id="coord-btn" class="icon-btn active" onclick="toggleCoordinates()" title="Toggle Cell Coordinates">
@@ -56,7 +86,7 @@
       <aside class="side-panel p2-panel">
         <div class="player-card" id="p2-card">
           <div class="player-info">
-            <div class="piece-avatar p2-avatar"></div>
+            <div class="piece-avatar p2-avatar" id="p2-avatar-icon"></div>
             <div class="player-details">
               <span class="player-name" id="p2-name">Player 2</span>
               <span class="player-status" id="p2-status-badge">Waiting</span>
@@ -115,7 +145,7 @@
       <aside class="side-panel p1-panel">
         <div class="player-card" id="p1-card">
           <div class="player-info">
-            <div class="piece-avatar p1-avatar"></div>
+            <div class="piece-avatar p1-avatar" id="p1-avatar-icon"></div>
             <div class="player-details">
               <span class="player-name" id="p1-name">Player 1</span>
               <span class="player-status" id="p1-status-badge">Active Turn</span>
@@ -161,10 +191,19 @@
       </div>
       <div class="modal-body">
         <div class="rule-section">
+          <h3>🤖 Playing vs Computer</h3>
+          <ul>
+            <li><strong>Easy:</strong> Makes random valid moves & captures. Perfect for beginners!</li>
+            <li><strong>Hard:</strong> Uses Minimax AI with Alpha-Beta pruning to evaluate tactical moves, center control, and king promotion.</li>
+            <li><strong>Starting Player:</strong> You can choose whether you or the computer makes the first move.</li>
+          </ul>
+        </div>
+
+        <div class="rule-section">
           <h3>🎯 How to Play</h3>
           <ul>
             <li>Click a piece to select it, then click a highlighted destination cell to move.</li>
-            <li><strong>Standard Move:</strong> Advance diagonally 1 square forward. (Kings can move in any diagonal direction).</li>
+            <li><strong>Standard Move:</strong> Advance diagonally 1 square forward. (Kings move in any diagonal direction).</li>
             <li><strong>Capture (Jump):</strong> Leap over an adjacent opponent's piece into an empty square beyond it.</li>
             <li><strong>King Me:</strong> Reach the furthest opposite rank to become a King ♔ with backwards movement ability.</li>
             <li><strong>Winning:</strong> Capture all opponent pieces or trap them so they have no legal moves.</li>
